@@ -5,7 +5,7 @@ import vk_api
 app = Flask(__name__)
 
 # Твои данные
-TOKEN = "vk1.a.BVFM-nypRNWDpdNCZXJ_wVoDh9kBohFkREJ0cEkOWh3zFv33wf1Zrie2zfFqSw1k0IE_WF2GOIbDxfiz6w_1OmTAlgKUoILqnRGgXR9dRuyqcO2oIi-WyaLg5b3Ei00XoLFjoqtlCJLVREvNP5POquMyW55HqACgXmLNmtbu-cvLil63lZ3F7BTC65MxKuzBj4c6RH9F3UXkDwlIzL3XDA"
+TOKEN = "vk1.a.BVFM-nypRNiDpNCZX3_WoOh5kBohFidE0CEkOm3zFv33wF1Zle-F5GiJla1-p1s5J3v9I6la1-pl5sJ3v9I6"
 GROUP_ID = 198743474
 CONFIRMATION_CODE = "a7d82bb2"
 
@@ -52,7 +52,7 @@ def processing():
         if data['type'] == 'confirmation':
             return CONFIRMATION_CODE
             
-        # 2. Новое сообщение (команды /топ и /мои очки)
+        # 2. Новое сообщение (команды /топ, /статистика и сброс)
         elif data['type'] == 'message_new':
             message = data['object']['message']
             user_id = message['from_id']
@@ -100,10 +100,24 @@ def processing():
                     message=reply_text,
                     random_id=0
                 )
+
+            # Команда СБРОСА всей статистики (обнуление)
+            elif text in ['/сброс', 'сбросить топ']:
+                conn = sqlite3.connect('database.db')
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM users')
+                conn.commit()
+                conn.close()
+                
+                vk.messages.send(
+                    peer_id=message['peer_id'],
+                    message="🔄 Вся статистика успешно сброшена! Очки всех участников обнулены.",
+                    random_id=0
+                )
                 
             return 'ok'
 
-        # 3. Начисление за лайк (универсальный поиск ID)
+        # 3. Начисление за лайк
         elif data['type'] == 'like_add':
             obj = data['object']
             user_id = obj.get('liker_id') or obj.get('user_id')
