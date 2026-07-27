@@ -87,7 +87,7 @@ def processing():
                         reply_text = "🏆 Топ-5 участников:\n"
                         for index, (uid, score) in enumerate(top_users, start=1):
                             name = names_dict.get(uid, f"id{uid}")
-                            reply_text += f"{index}. {name} — {score} очков\n"
+                            reply_text += f"{index}. [id{uid}|{name}] — {score} очков\n"
                             
                     vk.messages.send(peer_id=message['peer_id'], message=reply_text, random_id=0)
                 
