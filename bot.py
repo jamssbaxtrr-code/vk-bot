@@ -76,7 +76,6 @@ def processing():
                             name = f"{user_info['first_name']} {user_info['last_name']}"
                         except:
                             name = f"ID{uid}"
-                        # Ссылка-упоминание на пользователя в ВК
                         reply_text += f"{index}. @id{uid} ({name}) — {score} очков\n"
                 
                 vk.messages.send(
@@ -114,7 +113,7 @@ def processing():
 
         # 4. Начисление за комментарий
         elif data['type'] == 'wall_reply_new':
-user_id = data['object'].get('from_id')
+            user_id = data['object'].get('from_id')
             add_score(user_id, 1)
             return 'ok'
             
@@ -122,3 +121,7 @@ user_id = data['object'].get('from_id')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
+
+
+
