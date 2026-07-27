@@ -114,8 +114,6 @@ def processing():
 
         # 4. Начисление за комментарий
         elif data['type'] == 'wall_reply_new':
-
-
 user_id = data['object'].get('from_id')
             add_score(user_id, 1)
             return 'ok'
