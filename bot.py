@@ -77,11 +77,9 @@ def processing():
                     if not top_users:
                         reply_text = "Рейтинг пока пуст!"
                     else:
-                        # Собираем ID пользователей для массового запроса имён
                         user_ids = [uid for uid, score in top_users]
                         try:
                             user_infos = vk.users.get(user_ids=user_ids)
-                            # Создаем словарь для быстрого поиска: id -> "Имя Фамилия"
                             names_dict = {user['id']: f"{user['first_name']} {user['last_name']}" for user in user_infos}
                         except Exception:
                             names_dict = {}
@@ -125,7 +123,18 @@ def processing():
                             target_id_str = parts[1]
                             points = int(parts[2])
                             clean_target = target_id_str.replace('@', '').replace('vk.com/', '').strip('/')
-                            target_id = int(clean_target[2:]) if clean_target.startswith('id') else int(clean_target)
+                            
+                            if clean_target.startswith('id') and clean_target[2:].isdigit():
+                                target_id = int(clean_target[2:])
+                            elif clean_target.isdigit():
+                                target_id = int(clean_target)
+                            else:
+                                resolved = vk.utils.resolveScreenName(screen_name=clean_target)
+                                if resolved and resolved.get('type') == 'user':
+                                    target_id = resolved['object_id']
+                                else:
+                                    raise Exception("User not found")
+                                    
                             update_score(target_id, points)
                             vk.messages.send(peer_id=message['peer_id'], message=f"✅ Успешно начислено {points} очков.", random_id=0)
                         except Exception:
@@ -140,7 +149,18 @@ def processing():
                             target_id_str = parts[1]
                             points = int(parts[2])
                             clean_target = target_id_str.replace('@', '').replace('vk.com/', '').strip('/')
-                            target_id = int(clean_target[2:]) if clean_target.startswith('id') else int(clean_target)
+                            
+                            if clean_target.startswith('id') and clean_target[2:].isdigit():
+                                target_id = int(clean_target[2:])
+                            elif clean_target.isdigit():
+                                target_id = int(clean_target)
+                            else:
+                                resolved = vk.utils.resolveScreenName(screen_name=clean_target)
+                                if resolved and resolved.get('type') == 'user':
+                                    target_id = resolved['object_id']
+                                else:
+                                    raise Exception("User not found")
+                                    
                             update_score(target_id, -points)
                             vk.messages.send(peer_id=message['peer_id'], message=f"✅ Успешно снято {points} очков.", random_id=0)
                         except Exception:
