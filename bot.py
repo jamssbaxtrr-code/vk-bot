@@ -70,7 +70,14 @@ def processing():
     if request.method == 'GET':
         return "Bot is running!", 200
 
-    data = json.loads(request.data.decode('utf-8'))
+    # Защита от пустых запросов (например, от пингов UptimeRobot)
+    if not request.data:
+        return "OK", 200
+
+    try:
+        data = json.loads(request.data.decode('utf-8'))
+    except Exception:
+        return "OK", 200
     
     if 'type' in data:
         # 1. Подтверждение сервера
@@ -129,28 +136,27 @@ def processing():
                 conn.close()
                 vk.messages.send(peer_id=message['peer_id'], message="🔄 Вся статистика успешно сброшена!", random_id=0)
 
-            # Команда ВЫДАЧИ баллов (например: /дать @id 10)
-            elif text_lower.startswith(('/дать', '/плюс', 'выдать')):
+            # Команда ВЫДАЧИ баллов (например: /дать @id 10 или /выдать @id 10)
+            elif text_lower.startswith(('/дать', '/плюс', 'выдать', '/выдать')):
                 parts = text.split()
                 if len(parts) >= 3:
                     target_id_str = parts[1]
                     try:
                         points = int(parts[2])
-                        # Достаем числовой ID из упоминания вроде [id123|Name] или прямого id
-                        target_id = int(''.filter(str.isdigit, target_id_str)) if not target_id_str.isdigit() else int(target_id_str)
+                        target_id = int(''.join(filter(str.isdigit, target_id_str)))
                         update_score(target_id, points)
                         vk.messages.send(peer_id=message['peer_id'], message=f"✅ Успешно начислено {points} очков пользователю.", random_id=0)
                     except ValueError:
                         vk.messages.send(peer_id=message['peer_id'], message="❌ Ошибка в формате числа очков.", random_id=0)
 
             # Команда УДАЛЕНИЯ/УМЕНЬШЕНИЯ баллов (например: /забрать @id 5)
-            elif text_lower.startswith((('/забрать', '/минус', '/удалить'))):
+            elif text_lower.startswith(('/забрать', '/минус', '/удалить')):
                 parts = text.split()
                 if len(parts) >= 3:
                     target_id_str = parts[1]
                     try:
                         points = int(parts[2])
-                        target_id = int(''.filter(str.isdigit, target_id_str)) if not target_id_str.isdigit() else int(target_id_str)
+                        target_id = int(''.join(filter(str.isdigit, target_id_str)))
                         update_score(target_id, -points)
                         vk.messages.send(peer_id=message['peer_id'], message=f"✅ Успешно списано {points} очков у пользователя.", random_id=0)
                     except ValueError:
@@ -162,12 +168,11 @@ def processing():
         elif data['type'] == 'like_add':
             obj = data['object']
             user_id = obj.get('liker_id') or obj.get('user_id')
-            object_id = obj.get('object_id') # ID записи/фото
+            object_id = obj.get('object_id')
             
             if user_id and object_id:
                 conn = sqlite3.connect('database.db')
                 cursor = conn.cursor()
-                # Проверяем, ставил ли уже лайк на этот объект
                 cursor.execute('SELECT * FROM liked_posts WHERE user_id = ? AND object_id = ?', (user_id, object_id))
                 if not cursor.fetchone():
                     cursor.execute('INSERT INTO liked_posts (user_id, object_id) VALUES (?, ?)', (user_id, object_id))
@@ -193,39 +198,27 @@ def processing():
                 conn.close()
             return 'ok'
 
-        # 5. Комментарий (с бонусом первому комментатору и защитой от повторных комментов)
+        # 5. Комментарий (с бонусом первому комментатору)
         elif data['type'] == 'wall_reply_new':
             obj = data['object']
             user_id = obj.get('from_id')
-            post_id = obj.get('post_id') # ID записи на стене
+            post_id = obj.get('post_id')
             
             if user_id and post_id:
                 conn = sqlite3.connect('database.db')
                 cursor = conn.cursor()
                 
-                # Проверяем, есть ли уже запись об этом посте
                 cursor.execute('SELECT first_commenter_id FROM post_comments WHERE post_id = ?', (post_id,))
                 row = cursor.fetchone()
                 
                 if not row:
-                    # Это самый первый комментарий к посту! Даем 2 балла
+                    # Первый комментарий — 2 балла
                     cursor.execute('INSERT INTO post_comments (post_id, first_commenter_id) VALUES (?, ?)', (post_id, user_id))
                     conn.commit()
                     conn.close()
                     update_score(user_id, 2)
                 else:
-                    # Пост уже комментировали. Проверим, писал ли этот конкретный человек под ним раньше
-                    # (чтобы заспамить 10 комментов под один пост нельзя было)
-                    # Для простоты проверяем: если это не первый комментатор, проверим общее правило (можно хранить список комментаторов поста)
-                    # Здесь сделаем простую защиту: если пользователь еще не оставлял коммент к ЭТОМУ посту, даем 1 балл.
-                    # Создадим мини-проверку по таблице, чтобы один пользователь получал балл за пост только 1 раз.
-                    cursor.close()
                     conn.close()
-                    
-                    # Улучшенная проверка на уникальность комментатора к посту:
-                    # Проверим через отдельную вспомогательную логику или сохранение
-                    # Давайте учтем: если пользователь не первый, но пишет первый раз под этим постом — даем 1 балл.
-                    pass
                 
             return 'ok'
             
