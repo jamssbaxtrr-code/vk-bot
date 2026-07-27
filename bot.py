@@ -5,7 +5,7 @@ import vk_api
 app = Flask(__name__)
 
 # Твои данные
-TOKEN = "vk1.a.BVFM-nypRNiDpNCZX3_WoOh5kBohFidE0CEkOm3zFv33wF1Zle-F5GiJla1-p1s5J3v9I6la1-pl5sJ3v9I6"
+TOKEN = "vk1.a.BVFM-nypRNWDpdNCZXJ_wVoDh9kBohFkREJ0cEkOWh3zFv33wf1Zrie2zfFqSw1k0IE_WF2GOIbDxfiz6w_1OmTAlgKUoILqnRGgXR9dRuyqcO2oIi-WyaLg5b3Ei00XoLFjoqtlCJLVREvNP5POquMyW55HqACgXmLNmtbu-cvLil63lZ3F7BTC65MxKuzBj4c6RH9F3UXkDwlIzL3XDA"
 GROUP_ID = 198743474
 CONFIRMATION_CODE = "a7d82bb2"
 
