@@ -77,9 +77,20 @@ def processing():
                     if not top_users:
                         reply_text = "Рейтинг пока пуст!"
                     else:
+                        # Собираем ID пользователей для массового запроса имён
+                        user_ids = [uid for uid, score in top_users]
+                        try:
+                            user_infos = vk.users.get(user_ids=user_ids)
+                            # Создаем словарь для быстрого поиска: id -> "Имя Фамилия"
+                            names_dict = {user['id']: f"{user['first_name']} {user['last_name']}" for user in user_infos}
+                        except Exception:
+                            names_dict = {}
+
                         reply_text = "🏆 Топ-5 участников:\n"
                         for index, (uid, score) in enumerate(top_users, start=1):
-                            reply_text += f"{index}. @id{uid} — {score} очков\n"
+                            name = names_dict.get(uid, f"id{uid}")
+                            reply_text += f"{index}. {name} — {score} очков\n"
+                            
                     vk.messages.send(peer_id=message['peer_id'], message=reply_text, random_id=0)
                 
                 elif text_lower in ['/статистика', 'мои очки', 'статистика']:
