@@ -136,31 +136,51 @@ def processing():
                 conn.close()
                 vk.messages.send(peer_id=message['peer_id'], message="🔄 Вся статистика успешно сброшена!", random_id=0)
 
-            # Команда ВЫДАЧИ баллов (например: /дать @id 10 или /выдать @id 10)
+            # Команда ВЫДАЧИ баллов (например: /дать @musk_2000 10 или /выдать @id 10)
             elif text_lower.startswith(('/дать', '/плюс', 'выдать', '/выдать')):
                 parts = text.split()
                 if len(parts) >= 3:
                     target_id_str = parts[1]
                     try:
                         points = int(parts[2])
-                        target_id = int(''.join(filter(str.isdigit, target_id_str)))
+                        
+                        clean_target = target_id_str.replace('@', '').replace('vk.com/', '').strip('/')
+                        
+                        if clean_target.startswith('id') and clean_target[2:].isdigit():
+                            target_id = int(clean_target[2:])
+                        elif clean_target.isdigit():
+                            target_id = int(clean_target)
+                        else:
+                            user_info = vk.users.get(user_ids=clean_target)[0]
+                            target_id = user_info['id']
+
                         update_score(target_id, points)
                         vk.messages.send(peer_id=message['peer_id'], message=f"✅ Успешно начислено {points} очков пользователю.", random_id=0)
-                    except ValueError:
-                        vk.messages.send(peer_id=message['peer_id'], message="❌ Ошибка в формате числа очков.", random_id=0)
+                    except Exception as e:
+                        vk.messages.send(peer_id=message['peer_id'], message="❌ Ошибка: пользователь не найден или неверный формат.", random_id=0)
 
-            # Команда УДАЛЕНИЯ/УМЕНЬШЕНИЯ баллов (например: /забрать @id 5)
+            # Команда УДАЛЕНИЯ/УМЕНЬШЕНИЯ баллов (например: /забрать @musk_2000 5)
             elif text_lower.startswith(('/забрать', '/минус', '/удалить')):
                 parts = text.split()
                 if len(parts) >= 3:
                     target_id_str = parts[1]
                     try:
                         points = int(parts[2])
-                        target_id = int(''.join(filter(str.isdigit, target_id_str)))
+                        
+                        clean_target = target_id_str.replace('@', '').replace('vk.com/', '').strip('/')
+                        
+                        if clean_target.startswith('id') and clean_target[2:].isdigit():
+                            target_id = int(clean_target[2:])
+                        elif clean_target.isdigit():
+                            target_id = int(clean_target)
+                        else:
+                            user_info = vk.users.get(user_ids=clean_target)[0]
+                            target_id = user_info['id']
+
                         update_score(target_id, -points)
                         vk.messages.send(peer_id=message['peer_id'], message=f"✅ Успешно списано {points} очков у пользователя.", random_id=0)
-                    except ValueError:
-                        vk.messages.send(peer_id=message['peer_id'], message="❌ Ошибка в формате числа очков.", random_id=0)
+                    except Exception as e:
+                        vk.messages.send(peer_id=message['peer_id'], message="❌ Ошибка: пользователь не найден или неверный формат.", random_id=0)
                 
             return 'ok'
 
