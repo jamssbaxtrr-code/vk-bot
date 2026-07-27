@@ -1,7 +1,6 @@
 from flask import Flask, request, json
 import sqlite3
 import vk_api
-from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
 app = Flask(__name__)
 
@@ -10,11 +9,11 @@ TOKEN = "vk1.a.BVFM-nypRNiDpNCZX3_WoOh5kBohFidE0CEkOm3zFv33wF1Zle-F5GiJla1-p1s5J
 GROUP_ID = 198743474
 CONFIRMATION_CODE = "a7d82bb2"
 
-# Инициализация VK API для отправки ответов
+# Инициализация VK API
 vk_session = vk_api.VkApi(token=TOKEN)
 vk = vk_session.get_api()
 
-# Настройка базы данных SQLite для очков
+# Настройка базы данных
 def init_db():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -29,7 +28,7 @@ def init_db():
 
 init_db()
 
-# Функция добавления очков пользователю
+# Добавление очков
 def add_score(user_id, points=1):
     if not user_id:
         return
@@ -49,18 +48,18 @@ def processing():
     data = json.loads(request.data.decode('utf-8'))
     
     if 'type' in data:
-        # 1. Подтверждение сервера для ВКонтакте
+        # 1. Подтверждение сервера
         if data['type'] == 'confirmation':
             return CONFIRMATION_CODE
             
-        # 2. Новое сообщение (команда /топ)
+        # 2. Новое сообщение (команды /топ и /мои очки)
         elif data['type'] == 'message_new':
             message = data['object']['message']
             user_id = message['from_id']
-            text = message.get('text', '').lower()
+            text = message.get('text', '').strip().lower()
             
+            # Команда ТОП-5
             if text in ['/топ', '!топ', 'топ']:
-                # Получаем топ-5 пользователей из базы
                 conn = sqlite3.connect('database.db')
                 cursor = conn.cursor()
                 cursor.execute('SELECT user_id, score FROM users ORDER BY score DESC LIMIT 5')
@@ -68,38 +67,56 @@ def processing():
                 conn.close()
                 
                 if not top_users:
-                    reply_text = "Рейтинг пока пуст! Будьте первым, кто поставит лайк или напишет комментарий."
+                    reply_text = "Рейтинг пока пуст! Ставьте лайки и пишите комментарии, чтобы заработать очки."
                 else:
                     reply_text = "🏆 Топ-5 активных участников:\n"
                     for index, (uid, score) in enumerate(top_users, start=1):
-                        # Получаем имя пользователя через VK API
                         try:
                             user_info = vk.users.get(user_ids=uid)[0]
                             name = f"{user_info['first_name']} {user_info['last_name']}"
                         except:
                             name = f"ID{uid}"
-                        reply_text += f"{index}. {name} — {score} очков\n"
+                        # Ссылка-упоминание на пользователя в ВК
+                        reply_text += f"{index}. @id{uid} ({name}) — {score} очков\n"
                 
-                # Отправляем сообщение в чат/личку
                 vk.messages.send(
                     peer_id=message['peer_id'],
                     message=reply_text,
                     random_id=0
                 )
+            
+            # Команда ЛИЧНОЙ статистики
+            elif text in ['/статистика', 'мои очки', 'статистика', '/мои очки']:
+                conn = sqlite3.connect('database.db')
+                cursor = conn.cursor()
+                cursor.execute('SELECT score FROM users WHERE user_id = ?', (user_id,))
+                row = cursor.fetchone()
+                conn.close()
+                
+                user_score = row[0] if row else 0
+                reply_text = f"📊 Ваша активность:\nУ вас набрано: {user_score} очков."
+                
+                vk.messages.send(
+                    peer_id=message['peer_id'],
+                    message=reply_text,
+                    random_id=0
+                )
+                
             return 'ok'
 
-        # 3. Лайк на запись (начисление очка)
+        # 3. Начисление за лайк
         elif data['type'] == 'like_add':
             obj = data['object']
-            # Проверяем, что лайк поставлен на запись на стене (object_type == 'wall')
             if obj.get('object_type') == 'wall':
                 user_id = obj.get('liker_id')
                 add_score(user_id, 1)
             return 'ok'
 
-        # 4. Комментарий на стене (начисление очка)
+        # 4. Начисление за комментарий
         elif data['type'] == 'wall_reply_new':
-            user_id = data['object'].get('from_id')
+
+
+user_id = data['object'].get('from_id')
             add_score(user_id, 1)
             return 'ok'
             
