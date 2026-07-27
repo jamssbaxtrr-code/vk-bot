@@ -103,12 +103,11 @@ def processing():
                 
             return 'ok'
 
-        # 3. Начисление за лайк
+        # 3. Начисление за лайк (универсальный поиск ID)
         elif data['type'] == 'like_add':
             obj = data['object']
-            if obj.get('object_type') == 'wall':
-                user_id = obj.get('liker_id')
-                add_score(user_id, 1)
+            user_id = obj.get('liker_id') or obj.get('user_id')
+            add_score(user_id, 1)
             return 'ok'
 
         # 4. Начисление за комментарий
@@ -121,7 +120,3 @@ def processing():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
-
-
-
